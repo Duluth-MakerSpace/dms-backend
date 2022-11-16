@@ -9,33 +9,34 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.CustomBaseEntity = void 0;
+exports.EventTemplate = void 0;
+const CustomBaseEntity_1 = require("./CustomBaseEntity");
 const type_graphql_1 = require("type-graphql");
-const nanoid_1 = require("nanoid");
 const typeorm_1 = require("typeorm");
-let CustomBaseEntity = class CustomBaseEntity extends typeorm_1.BaseEntity {
-    constructor() {
-        super(...arguments);
-        this.uuid = (0, nanoid_1.nanoid)(10);
-    }
+const CalendarEvent_1 = require("./CalendarEvent");
+let EventTemplate = class EventTemplate extends CustomBaseEntity_1.CustomBaseEntity {
 };
 __decorate([
     (0, type_graphql_1.Field)(() => String),
-    (0, typeorm_1.PrimaryColumn)(),
+    (0, typeorm_1.Column)({ type: "text" }),
     __metadata("design:type", String)
-], CustomBaseEntity.prototype, "uuid", void 0);
+], EventTemplate.prototype, "title", void 0);
 __decorate([
-    (0, type_graphql_1.Field)(() => String),
-    (0, typeorm_1.CreateDateColumn)(),
-    __metadata("design:type", Date)
-], CustomBaseEntity.prototype, "createdAt", void 0);
+    (0, type_graphql_1.Field)(() => String, { nullable: true }),
+    (0, typeorm_1.Column)({ type: "text", nullable: true }),
+    __metadata("design:type", String)
+], EventTemplate.prototype, "description", void 0);
 __decorate([
-    (0, type_graphql_1.Field)(() => String),
-    (0, typeorm_1.UpdateDateColumn)(),
-    __metadata("design:type", Date)
-], CustomBaseEntity.prototype, "updatedAt", void 0);
-CustomBaseEntity = __decorate([
+    (0, type_graphql_1.Field)(() => String, { nullable: true }),
+    (0, typeorm_1.Column)({ type: "text", nullable: true }),
+    __metadata("design:type", String)
+], EventTemplate.prototype, "image", void 0);
+__decorate([
+    (0, typeorm_1.OneToMany)(() => CalendarEvent_1.CalendarEvent, (calendarEvent) => calendarEvent.eventTemplate),
+    __metadata("design:type", Array)
+], EventTemplate.prototype, "calendarEvents", void 0);
+EventTemplate = __decorate([
     (0, type_graphql_1.ObjectType)(),
     (0, typeorm_1.Entity)()
-], CustomBaseEntity);
-exports.CustomBaseEntity = CustomBaseEntity;
+], EventTemplate);
+exports.EventTemplate = EventTemplate;

@@ -1,4 +1,9 @@
 import { DataSource } from "typeorm";
+import { CalendarClass } from "./entities/CalendarClass";
+import { CalendarEvent } from "./entities/CalendarEvent";
+import { Certification } from "./entities/Certification";
+import { ClassTemplate } from "./entities/ClassTemplate";
+import { EventTemplate } from "./entities/EventTemplate";
 import { Post } from "./entities/Post";
 import { User } from "./entities/User";
 
@@ -11,7 +16,8 @@ export const AppDataSource = new DataSource({
     database: 'dmstest',
     synchronize: true, // run migrations
     logging: true,
-    entities: [User, Post],
+    cache: true,
+    entities: [User, Post, Certification, ClassTemplate, CalendarClass, EventTemplate, CalendarEvent],
     subscribers: [],
     migrations: [],
 })

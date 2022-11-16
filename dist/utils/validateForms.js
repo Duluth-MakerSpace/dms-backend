@@ -1,7 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getPasswordErrors = exports.getRegisterErrors = void 0;
-const getRegisterErrors = (email, password, username) => {
+const getRegisterErrors = (email, password, name) => {
     if (!email.includes("@")) {
         return [{ field: "email", message: "Invalid email address" }];
     }
@@ -9,8 +9,11 @@ const getRegisterErrors = (email, password, username) => {
     if (passwordErrors) {
         return passwordErrors;
     }
-    if (username.includes('@')) {
-        return [{ field: "username", message: "Invalid character(s)" }];
+    if (name.includes('@')) {
+        return [{ field: "name", message: "Invalid character(s)" }];
+    }
+    if (!name.includes(' ')) {
+        return [{ field: "name", message: "Please enter your full name" }];
     }
     return null;
 };

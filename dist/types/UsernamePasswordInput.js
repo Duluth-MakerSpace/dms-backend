@@ -9,28 +9,28 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.UsernamePasswordInput = void 0;
+exports.NamePasswordInput = void 0;
 const type_graphql_1 = require("type-graphql");
-let UsernamePasswordInput = class UsernamePasswordInput {
+let NamePasswordInput = class NamePasswordInput {
     constructor() {
         this.email = "";
-        this.username = "";
+        this.name = "";
         this.password = "";
     }
 };
 __decorate([
     (0, type_graphql_1.Field)(() => String),
     __metadata("design:type", String)
-], UsernamePasswordInput.prototype, "email", void 0);
+], NamePasswordInput.prototype, "email", void 0);
 __decorate([
     (0, type_graphql_1.Field)(() => String),
     __metadata("design:type", String)
-], UsernamePasswordInput.prototype, "username", void 0);
+], NamePasswordInput.prototype, "name", void 0);
 __decorate([
     (0, type_graphql_1.Field)(() => String),
     __metadata("design:type", String)
-], UsernamePasswordInput.prototype, "password", void 0);
-UsernamePasswordInput = __decorate([
+], NamePasswordInput.prototype, "password", void 0);
+NamePasswordInput = __decorate([
     (0, type_graphql_1.InputType)()
-], UsernamePasswordInput);
-exports.UsernamePasswordInput = UsernamePasswordInput;
+], NamePasswordInput);
+exports.NamePasswordInput = NamePasswordInput;

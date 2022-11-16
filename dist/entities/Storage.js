@@ -9,33 +9,34 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.CustomBaseEntity = void 0;
+exports.Storage = void 0;
+const CustomBaseEntity_1 = require("./CustomBaseEntity");
 const type_graphql_1 = require("type-graphql");
-const nanoid_1 = require("nanoid");
 const typeorm_1 = require("typeorm");
-let CustomBaseEntity = class CustomBaseEntity extends typeorm_1.BaseEntity {
-    constructor() {
-        super(...arguments);
-        this.uuid = (0, nanoid_1.nanoid)(10);
-    }
+let Storage = class Storage extends CustomBaseEntity_1.CustomBaseEntity {
 };
 __decorate([
+    (0, type_graphql_1.Field)(() => Boolean),
+    (0, typeorm_1.Column)({ type: "bool", default: false }),
+    __metadata("design:type", Boolean)
+], Storage.prototype, "disabled", void 0);
+__decorate([
     (0, type_graphql_1.Field)(() => String),
-    (0, typeorm_1.PrimaryColumn)(),
+    (0, typeorm_1.Column)({ type: "text" }),
     __metadata("design:type", String)
-], CustomBaseEntity.prototype, "uuid", void 0);
+], Storage.prototype, "title", void 0);
 __decorate([
     (0, type_graphql_1.Field)(() => String),
-    (0, typeorm_1.CreateDateColumn)(),
-    __metadata("design:type", Date)
-], CustomBaseEntity.prototype, "createdAt", void 0);
+    (0, typeorm_1.Column)({ type: "text", nullable: true }),
+    __metadata("design:type", String)
+], Storage.prototype, "description", void 0);
 __decorate([
-    (0, type_graphql_1.Field)(() => String),
-    (0, typeorm_1.UpdateDateColumn)(),
-    __metadata("design:type", Date)
-], CustomBaseEntity.prototype, "updatedAt", void 0);
-CustomBaseEntity = __decorate([
+    (0, type_graphql_1.Field)(() => type_graphql_1.Float),
+    (0, typeorm_1.Column)({ type: "float" }),
+    __metadata("design:type", Number)
+], Storage.prototype, "cost", void 0);
+Storage = __decorate([
     (0, type_graphql_1.ObjectType)(),
     (0, typeorm_1.Entity)()
-], CustomBaseEntity);
-exports.CustomBaseEntity = CustomBaseEntity;
+], Storage);
+exports.Storage = Storage;

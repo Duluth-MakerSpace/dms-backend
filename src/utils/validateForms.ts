@@ -1,6 +1,6 @@
 import { FieldError } from "src/types";
 
-export const getRegisterErrors = (email: string, password: string, username: string): FieldError[] | null => {
+export const getRegisterErrors = (email: string, password: string, name: string): FieldError[] | null => {
     // Validate user creation.
     // TODO: better email validation with !
     if (!email.includes("@")) {
@@ -11,8 +11,11 @@ export const getRegisterErrors = (email: string, password: string, username: str
         return passwordErrors;
     }
 
-    if (username.includes('@')) {
-        return [{ field: "username", message: "Invalid character(s)" }]
+    if (name.includes('@')) {
+        return [{ field: "name", message: "Invalid character(s)" }]
+    }
+    if (!name.includes(' ')) {
+        return [{ field: "name", message: "Please enter your full name" }]
     }
 
     return null;
