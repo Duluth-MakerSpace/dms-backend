@@ -1,7 +1,10 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.SESSION_SECRET = exports.FORGOT_PASS_PREFIX = exports.COOKIE_NAME = exports.__prod__ = void 0;
+exports.SESSION_SECRET = exports.RFID_PREFIX = exports.FORGOT_PASS_PREFIX = exports.COOKIE_NAME = exports.BACKEND_URL = exports.FRONTEND_URL = exports.__prod__ = void 0;
 exports.__prod__ = process.env.NODE_ENV === 'production';
+exports.FRONTEND_URL = "http://localhost:3000";
+exports.BACKEND_URL = "http://localhost:4000";
 exports.COOKIE_NAME = "dms_cookie";
 exports.FORGOT_PASS_PREFIX = "oops-password:";
+exports.RFID_PREFIX = "rfid:";
 exports.SESSION_SECRET = "keyboard_cats_hide_in_env_var";

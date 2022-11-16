@@ -2,10 +2,11 @@ import { User } from "../entities/User";
 import { Arg, Ctx, Field, Int, Mutation, ObjectType, Query, Resolver } from "type-graphql";
 import { MyContext, FieldError } from "../types";
 import argon2 from "argon2"
-import { COOKIE_NAME, FORGOT_PASS_PREFIX } from "../constants";
+import { COOKIE_NAME, FORGOT_PASS_PREFIX, FRONTEND_URL, RFID_PREFIX } from "../constants";
 import { nanoid } from "nanoid";
 import { sendEmail } from "../utils/sendEmail";
 import { getPasswordErrors, getRegisterErrors } from "../utils/validateForms";
+import { ILike } from "typeorm";
 
 @ObjectType()
 class UserResponse {
@@ -51,7 +52,7 @@ export class UserResolver {
         await sendEmail(
             email,
             "Reset your password 🔐",
-            `Click to <a href='http://localhost:3000/reset-password/${token}'>reset your password</a>. This link will expire in 48 hours.`
+            `Click to <a href='${FRONTEND_URL}/reset-password/${token}'>reset your password</a>. This link will expire in 48 hours.`
         )
         return true;
     }
@@ -89,7 +90,19 @@ export class UserResolver {
     @Query(() => [User])
     users(
     ): Promise<User[]> {
-        return User.find();
+        return User.find({ order: { id: "ASC" } });
+    }
+
+    @Query(() => [User])
+    usersSearch(
+        @Arg('search', () => String) search: string,
+    ): Promise<User[]> {
+        return User.find({
+            where: [
+                { name: ILike(`%${search}%`) },
+            ],
+            cache: 30000
+        });
     }
 
     @Query(() => User, { nullable: true })
@@ -102,42 +115,43 @@ export class UserResolver {
     @Mutation(() => UserResponse)
     async createUser(
         @Arg('email', () => String) email: string,
-        @Arg('username', () => String) username: string,
+        @Arg('name', () => String) name: string,
         @Arg('password', () => String) password: string,
-        @Arg('name', () => String, { nullable: true }) name: string | null,
-        @Arg('phone', () => String, { nullable: true }) phone: string | null,
-        @Arg('emerg_contact', () => String, { nullable: true }) emerg_contact: string | null,
+        @Arg('phone', () => String) phone: string,
+        @Arg('emergPhone', () => String) emergPhone: string,
+        @Arg('emergContact', () => String) emergContact: string,
+        @Arg('waivered', () => Boolean) waivered: boolean,
         @Arg('newsletter', () => Boolean) newsletter: boolean,
-        @Arg('privacy_level', () => Int) privacy_level: number,
+        @Arg('privacyLevel', () => Int) privacyLevel: number,
         @Ctx() { req }: MyContext
     ): Promise<UserResponse> {
 
-        const errors = getRegisterErrors(email, password, username);
+        const errors = getRegisterErrors(email, password, name);
         if (errors) {
             return { errors: errors }
         }
 
         const hash = await argon2.hash(password);
-        let user;
 
         // Attempt to create user.
+        let user;
         try {
             user = await User.create({
-                // id: -1, //TODO REMOVE?
                 email: email,
-                username: username,
+                name: name,
                 password: hash,
-                name: name ? name : "TODO",
-                phone: phone ? phone : "TODO",
-                emerg_contact: emerg_contact ? emerg_contact : "TODO",
+                phone: phone,
+                emergPhone: emergPhone,
+                emergContact: emergContact,
+                waivered: waivered,
                 newsletter: newsletter,
-                privacy_level: privacy_level
+                privacyLevel: privacyLevel
             }).save()
             // Log in the user.
             req.session.uuid = user.uuid;
         } catch (err: any) {
             if (err && err.code === "23505") {
-                return { errors: [{ field: "email", message: "Email already exists" }] }
+                return { errors: [{ field: "email", message: "Email/name already exists" }] }
             }
             console.log("Registration error:", err);
         }
@@ -149,37 +163,38 @@ export class UserResolver {
 
     @Mutation(() => UserResponse)
     async login(
-        @Arg('usernameOrEmail') usernameOrEmail: string,
+        @Arg('email') email: string,
         @Arg('password') password: string,
         @Ctx() { req }: MyContext
     ): Promise<UserResponse> {
-        usernameOrEmail = usernameOrEmail.toLowerCase();
+        email = email.toLowerCase();
+        console.log('HaaaI!')
         const user = await User.findOne(
-            usernameOrEmail.includes("@")
-                ? { where: { email: usernameOrEmail } }
-                : { where: { username: usernameOrEmail } }
+            { where: { email: email } }
         );
+        console.log('bbbb!')
 
         if (!user) {
             return {
-                errors: [{ field: 'usernameOrEmail', message: 'User not found' }]
+                errors: [{ field: 'email', message: 'User not found' }]
             }
         }
 
+        console.log('ccc!')
         const valid = await argon2.verify(user.password, password);
+        console.log('ddd!')
         if (!valid) {
             return {
                 errors: [{ field: 'password', message: 'Incorrect password' }]
             }
         }
 
+        console.log('HI!')
         // Log in.
         req.session.uuid = user.uuid;
 
         return { user };
     }
-
-
 
 
     @Mutation(() => Boolean)
@@ -197,6 +212,50 @@ export class UserResolver {
             })
         );
     }
+
+
+    @Mutation(() => Boolean)
+    async rfidLogin(
+        @Arg('rfid') rfid: string,
+        @Arg('durationSeconds', () => Int, { defaultValue: 30 }) durationSeconds: number,
+        @Ctx() { redisClient }: MyContext
+    ): Promise<Boolean> {
+        await redisClient.set(
+            RFID_PREFIX + rfid,
+            rfid,
+            "EX",
+            durationSeconds
+        );
+
+        return true;
+    }
+
+    @Mutation(() => Boolean)
+    async rfidLogout(
+        @Arg('rfid') rfid: string,
+        @Ctx() { redisClient }: MyContext
+    ): Promise<Boolean> {
+
+        await redisClient.del(RFID_PREFIX + rfid);
+
+        return true;
+    }
+
+    @Query(() => [String])
+    async rfids(
+        @Ctx() { redisClient }: MyContext
+    ): Promise<String[]> {
+        // Docs: https://luin.github.io/ioredis/classes/Redis.html
+        const keys = await redisClient.keys(`${RFID_PREFIX}*`);
+        if (keys.length === 0) {
+            return []
+        }
+        const values = await redisClient.mget(keys);
+        return values as string[];
+    }
+
+
+
 
     @Mutation(() => User, { nullable: true })
     async updateUser(

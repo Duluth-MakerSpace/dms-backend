@@ -2,7 +2,8 @@
 import { CustomBaseEntity } from "./CustomBaseEntity";
 
 import { Field, Int, ObjectType } from "type-graphql";
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm";
+import { Column, Entity, ManyToOne, OneToMany, PrimaryGeneratedColumn } from "typeorm";
+import { CalendarClass } from "./CalendarClass";
 
 @ObjectType()
 @Entity()
@@ -16,35 +17,47 @@ export class User extends CustomBaseEntity {
     email!: string;
 
     @Field(() => String)
-    @Column({ type: "text", unique: true })
-    username!: string;
+    @Column({ type: "text" })
+    name!: string;
 
     @Column({ type: "text" })
     password!: string;
 
-    @Field(() => String)
-    @Column()
-    name!: string;
+    @Field(() => String, { nullable: true })
+    @Column({ type: "text", nullable: true })
+    avatar?: string;
+
+    @Field(() => String, { nullable: true })
+    @Column({ type: "text", nullable: true })
+    rfid?: string;
 
     @Field(() => String)
     @Column()
     phone!: string;
 
     @Field(() => String)
+    @Column()
+    emergPhone!: string;
+
+    @Field(() => String)
     @Column({ type: "text", default: "Warning: unknown" })
-    emerg_contact!: string;
+    emergContact!: string;
 
     @Field(() => Boolean)
     @Column({ default: false })
     newsletter?: boolean;
 
-    @Field(() => Int)
-    @Column({ default: 1 })
-    privacy_level?: number;
+    @Field(() => Boolean)
+    @Column({ default: false })
+    waivered?: boolean;
 
     @Field(() => Int)
     @Column({ default: 1 })
-    access_level?: number;
+    privacyLevel?: number;
+
+    @Field(() => Int)
+    @Column({ default: 1 })
+    accessLevel?: number;
 
     @Field(() => String, { nullable: true })
     @Column({ nullable: true })
@@ -53,5 +66,12 @@ export class User extends CustomBaseEntity {
     @Field(() => String, { nullable: true })
     @Column({ type: "text", nullable: true })
     bio?: string;
+
+    @OneToMany(() => CalendarClass, (calendarClass) => calendarClass.instructor)
+    taughtClasses!: CalendarClass[];
+
+    @Field(() => CalendarClass)
+    @ManyToOne(() => CalendarClass, (calendarClass) => calendarClass.participants, { onDelete: 'CASCADE' })
+    attendedClasses!: CalendarClass;
 
 }
