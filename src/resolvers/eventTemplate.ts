@@ -1,6 +1,7 @@
-import { Arg, Field, Int, Mutation, ObjectType, Query, Resolver } from "type-graphql";
+import { Arg, Field, Int, Mutation, ObjectType, Query, Resolver, UseMiddleware } from "type-graphql";
 import { FieldError } from "../types";
 import { EventTemplate } from "../entities/EventTemplate";
+import { isAuth } from "../middleware/isAuth";
 
 @ObjectType()
 class EventTemplateResponse {
@@ -29,6 +30,7 @@ export class EventTemplateResolver {
     }
 
     @Mutation(() => EventTemplateResponse)
+    @UseMiddleware(isAuth)
     async createEventTemplate(
         @Arg('title', () => String) title: string,
         @Arg('description', () => String, { nullable: true }) description: string,
@@ -59,6 +61,7 @@ export class EventTemplateResolver {
 
 
     @Mutation(() => EventTemplate, { nullable: true })
+    @UseMiddleware(isAuth)
     async updateEventTemplate(
         @Arg('uuid', () => Int) uuid: string,
         @Arg('title', () => String) title: string,
@@ -82,6 +85,7 @@ export class EventTemplateResolver {
 
 
     @Mutation(() => Boolean)
+    @UseMiddleware(isAuth)
     async deleteEventTemplate(
         @Arg('uuid', () => String) uuid: string,
     ): Promise<Boolean> {

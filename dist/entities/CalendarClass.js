@@ -17,6 +17,19 @@ const Certification_1 = require("./Certification");
 const User_1 = require("./User");
 const ClassTemplate_1 = require("./ClassTemplate");
 let CalendarClass = class CalendarClass extends CustomBaseEntity_1.CustomBaseEntity {
+    firstDate() {
+        return new Date(Math.min(...this.dates.map(m => m.getTime())));
+    }
+    lastDate() {
+        return new Date(Math.max(...this.dates.map(m => m.getTime())));
+    }
+    nextDate() {
+        const dates = this.dates.filter(m => m.getTime() >= Date.now());
+        if (dates.length) {
+            return new Date(Math.min(...dates.map(m => m.getTime())));
+        }
+        return null;
+    }
 };
 __decorate([
     (0, type_graphql_1.Field)(() => type_graphql_1.Int),
@@ -39,11 +52,6 @@ __decorate([
     __metadata("design:type", Array)
 ], CalendarClass.prototype, "dates", void 0);
 __decorate([
-    (0, type_graphql_1.Field)(() => String),
-    (0, typeorm_1.Column)({ type: "date" }),
-    __metadata("design:type", Date)
-], CalendarClass.prototype, "lastDate", void 0);
-__decorate([
     (0, type_graphql_1.Field)(() => type_graphql_1.Int),
     (0, typeorm_1.Column)({ type: "int" }),
     __metadata("design:type", Number)
@@ -55,7 +63,7 @@ __decorate([
 ], CalendarClass.prototype, "note", void 0);
 __decorate([
     (0, type_graphql_1.Field)(() => Certification_1.Certification, { nullable: true }),
-    (0, typeorm_1.ManyToOne)(() => Certification_1.Certification, (category) => category.classes, { nullable: true, onDelete: 'CASCADE' }),
+    (0, typeorm_1.ManyToOne)(() => Certification_1.Certification, (category) => category.classes, { nullable: true }),
     __metadata("design:type", Object)
 ], CalendarClass.prototype, "grantsCert", void 0);
 __decorate([
@@ -73,6 +81,24 @@ __decorate([
     (0, typeorm_1.OneToMany)(() => User_1.User, (user) => user.attendedClasses),
     __metadata("design:type", Array)
 ], CalendarClass.prototype, "participants", void 0);
+__decorate([
+    (0, type_graphql_1.Field)(() => String),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Date)
+], CalendarClass.prototype, "firstDate", null);
+__decorate([
+    (0, type_graphql_1.Field)(() => String),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Date)
+], CalendarClass.prototype, "lastDate", null);
+__decorate([
+    (0, type_graphql_1.Field)(() => String, { nullable: true }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Object)
+], CalendarClass.prototype, "nextDate", null);
 CalendarClass = __decorate([
     (0, type_graphql_1.ObjectType)(),
     (0, typeorm_1.Entity)()

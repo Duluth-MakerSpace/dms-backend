@@ -16,6 +16,7 @@ exports.ClassTemplateResolver = void 0;
 const type_graphql_1 = require("type-graphql");
 const types_1 = require("../types");
 const ClassTemplate_1 = require("../entities/ClassTemplate");
+const isAuth_1 = require("../middleware/isAuth");
 let ClassTemplateResponse = class ClassTemplateResponse {
 };
 __decorate([
@@ -31,7 +32,7 @@ ClassTemplateResponse = __decorate([
 ], ClassTemplateResponse);
 let ClassTemplateResolver = class ClassTemplateResolver {
     classTemplates() {
-        return ClassTemplate_1.ClassTemplate.find({ order: { updatedAt: "DESC" } });
+        return ClassTemplate_1.ClassTemplate.find({ order: { updatedAt: "ASC" } });
     }
     classTemplate(uuid) {
         return ClassTemplate_1.ClassTemplate.findOne({ where: { uuid: uuid } });
@@ -90,6 +91,7 @@ __decorate([
 ], ClassTemplateResolver.prototype, "classTemplate", null);
 __decorate([
     (0, type_graphql_1.Mutation)(() => ClassTemplateResponse),
+    (0, type_graphql_1.UseMiddleware)(isAuth_1.isAuth),
     __param(0, (0, type_graphql_1.Arg)('title', () => String)),
     __param(1, (0, type_graphql_1.Arg)('description', () => String, { nullable: true })),
     __param(2, (0, type_graphql_1.Arg)('image', () => String, { nullable: true })),
@@ -99,6 +101,7 @@ __decorate([
 ], ClassTemplateResolver.prototype, "createClassTemplate", null);
 __decorate([
     (0, type_graphql_1.Mutation)(() => ClassTemplate_1.ClassTemplate, { nullable: true }),
+    (0, type_graphql_1.UseMiddleware)(isAuth_1.isAuth),
     __param(0, (0, type_graphql_1.Arg)('uuid', () => type_graphql_1.Int)),
     __param(1, (0, type_graphql_1.Arg)('title', () => String)),
     __param(2, (0, type_graphql_1.Arg)('description', () => String, { nullable: true })),
@@ -109,6 +112,7 @@ __decorate([
 ], ClassTemplateResolver.prototype, "updateClassTemplate", null);
 __decorate([
     (0, type_graphql_1.Mutation)(() => Boolean),
+    (0, type_graphql_1.UseMiddleware)(isAuth_1.isAuth),
     __param(0, (0, type_graphql_1.Arg)('uuid', () => String)),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),

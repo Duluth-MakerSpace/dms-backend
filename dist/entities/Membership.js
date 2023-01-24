@@ -9,35 +9,55 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.Post = void 0;
+exports.Membership = void 0;
 const CustomBaseEntity_1 = require("./CustomBaseEntity");
 const type_graphql_1 = require("type-graphql");
 const typeorm_1 = require("typeorm");
 const User_1 = require("./User");
-let Post = class Post extends CustomBaseEntity_1.CustomBaseEntity {
+let Membership = class Membership extends CustomBaseEntity_1.CustomBaseEntity {
+    expiresAt() {
+        const createdAt = this.createdAt ? this.createdAt.getTime() : Date.now();
+        return new Date(createdAt + 1000 * 60 * 60 * 24 * this.days);
+    }
+    isExpired() {
+        const today = new Date();
+        return this.expiresAt() <= today;
+    }
 };
 __decorate([
     (0, type_graphql_1.Field)(() => String),
     (0, typeorm_1.Column)({ type: "text" }),
     __metadata("design:type", String)
-], Post.prototype, "title", void 0);
+], Membership.prototype, "type", void 0);
 __decorate([
     (0, type_graphql_1.Field)(() => type_graphql_1.Int),
-    (0, typeorm_1.Column)({ type: "int", default: 1 }),
+    (0, typeorm_1.Column)({ type: "int" }),
     __metadata("design:type", Number)
-], Post.prototype, "category", void 0);
+], Membership.prototype, "days", void 0);
 __decorate([
-    (0, type_graphql_1.Field)(() => String),
-    (0, typeorm_1.Column)({ type: "text" }),
-    __metadata("design:type", String)
-], Post.prototype, "content", void 0);
+    (0, type_graphql_1.Field)(() => type_graphql_1.Float),
+    (0, typeorm_1.Column)({ type: "float" }),
+    __metadata("design:type", Number)
+], Membership.prototype, "cost", void 0);
 __decorate([
     (0, type_graphql_1.Field)(() => User_1.User),
-    (0, typeorm_1.ManyToOne)(() => User_1.User, (user) => user.posts, { onDelete: 'CASCADE' }),
+    (0, typeorm_1.ManyToOne)(() => User_1.User, (user) => user.memberships, { onDelete: 'CASCADE' }),
     __metadata("design:type", User_1.User)
-], Post.prototype, "author", void 0);
-Post = __decorate([
+], Membership.prototype, "user", void 0);
+__decorate([
+    (0, type_graphql_1.Field)(() => String),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Date)
+], Membership.prototype, "expiresAt", null);
+__decorate([
+    (0, type_graphql_1.Field)(() => Boolean),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Boolean)
+], Membership.prototype, "isExpired", null);
+Membership = __decorate([
     (0, type_graphql_1.ObjectType)(),
     (0, typeorm_1.Entity)()
-], Post);
-exports.Post = Post;
+], Membership);
+exports.Membership = Membership;

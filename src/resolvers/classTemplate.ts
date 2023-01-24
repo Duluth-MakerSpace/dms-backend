@@ -1,6 +1,7 @@
-import { Arg, Field, Int, Mutation, ObjectType, Query, Resolver } from "type-graphql";
+import { Arg, Field, Int, Mutation, ObjectType, Query, Resolver, UseMiddleware } from "type-graphql";
 import { FieldError } from "../types";
 import { ClassTemplate } from "../entities/ClassTemplate";
+import { isAuth } from "../middleware/isAuth";
 
 @ObjectType()
 class ClassTemplateResponse {
@@ -18,7 +19,7 @@ export class ClassTemplateResolver {
     @Query(() => [ClassTemplate])
     classTemplates(
     ): Promise<ClassTemplate[]> {
-        return ClassTemplate.find({ order: { updatedAt: "DESC" } });
+        return ClassTemplate.find({ order: { updatedAt: "ASC" } });
     }
 
     @Query(() => ClassTemplate, { nullable: true })
@@ -29,6 +30,7 @@ export class ClassTemplateResolver {
     }
 
     @Mutation(() => ClassTemplateResponse)
+    @UseMiddleware(isAuth)
     async createClassTemplate(
         @Arg('title', () => String) title: string,
         @Arg('description', () => String, { nullable: true }) description: string,
@@ -64,6 +66,7 @@ export class ClassTemplateResolver {
 
 
     @Mutation(() => ClassTemplate, { nullable: true })
+    @UseMiddleware(isAuth)
     async updateClassTemplate(
         @Arg('uuid', () => Int) uuid: string,
         @Arg('title', () => String) title: string,
@@ -87,6 +90,7 @@ export class ClassTemplateResolver {
 
 
     @Mutation(() => Boolean)
+    @UseMiddleware(isAuth)
     async deleteClassTemplate(
         @Arg('uuid', () => String) uuid: string,
     ): Promise<Boolean> {

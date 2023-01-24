@@ -13,6 +13,7 @@ exports.Fee = void 0;
 const CustomBaseEntity_1 = require("./CustomBaseEntity");
 const type_graphql_1 = require("type-graphql");
 const typeorm_1 = require("typeorm");
+const User_1 = require("./User");
 let Fee = class Fee extends CustomBaseEntity_1.CustomBaseEntity {
 };
 __decorate([
@@ -35,6 +36,11 @@ __decorate([
     (0, typeorm_1.Column)({ type: "int", default: 1 }),
     __metadata("design:type", Number)
 ], Fee.prototype, "quantity", void 0);
+__decorate([
+    (0, type_graphql_1.Field)(() => User_1.User),
+    (0, typeorm_1.ManyToOne)(() => User_1.User, (user) => user.fees, { onDelete: 'CASCADE' }),
+    __metadata("design:type", User_1.User)
+], Fee.prototype, "user", void 0);
 Fee = __decorate([
     (0, type_graphql_1.ObjectType)(),
     (0, typeorm_1.Entity)()

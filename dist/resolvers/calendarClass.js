@@ -19,6 +19,7 @@ const CalendarClass_1 = require("../entities/CalendarClass");
 const User_1 = require("../entities/User");
 const ClassTemplate_1 = require("../entities/ClassTemplate");
 const data_source_1 = require("../data-source");
+const isAuth_1 = require("../middleware/isAuth");
 let CalendarClassResponse = class CalendarClassResponse {
 };
 __decorate([
@@ -53,16 +54,16 @@ let CalendarClassResolver = class CalendarClassResolver {
         if (!template) {
             return { errors: [{ field: "templateId", message: "Class template not found" }] };
         }
-        if (maxParticipants < 0 || maxParticipants > 100) {
+        else if (maxParticipants < 0 || maxParticipants > 100) {
             return { errors: [{ field: "maxParticipants", message: "Invalid number of max participants" }] };
         }
-        if (cost < 0 || cost > 1000) {
+        else if (cost < 0 || cost > 1000) {
             return { errors: [{ field: "cost", message: "Invalid cost" }] };
         }
         if (memberCost < 0 || memberCost > 1000) {
             return { errors: [{ field: "memberCost", message: "Invalid member cost" }] };
         }
-        if (duration < 0 || duration > 60 * 24) {
+        else if (duration < 0 || duration > 60 * 24) {
             return { errors: [{ field: "duration", message: "Invalid duration" }] };
         }
         let calendarClass;
@@ -94,6 +95,53 @@ let CalendarClassResolver = class CalendarClassResolver {
         }
         return true;
     }
+    async addToClass(classUuid, { req }) {
+        let theClass = await CalendarClass_1.CalendarClass.findOne({
+            where: { uuid: classUuid },
+            relations: ['instructor', 'classTemplate', 'participants']
+        });
+        if (!theClass) {
+            return { errors: [{ field: "error", message: "Class not found" }] };
+        }
+        else if (theClass.participants.length >= theClass.maxParticipants) {
+            return { errors: [{ field: "error", message: "Class is full" }] };
+        }
+        const theUser = await User_1.User.findOne({
+            where: { uuid: req.session.uuid }
+        });
+        if (!theUser) {
+            return { errors: [{ field: "error", message: "User not found" }] };
+        }
+        else if (theClass.participants.filter(item => item.uuid === theUser.uuid).length !== 0) {
+            return { errors: [{ field: "error", message: "User is already in the class!" }] };
+        }
+        theClass.participants.push(theUser);
+        theClass = await theClass.save();
+        return { calendarClass: theClass };
+    }
+    async removeFromClass(userUuid, classUuid) {
+        let theClass = await CalendarClass_1.CalendarClass.findOne({
+            where: { uuid: classUuid },
+            relations: ['instructor', 'classTemplate', 'participants']
+        });
+        if (!theClass) {
+            return { errors: [{ field: "error", message: "Class not found" }] };
+        }
+        const theUser = await User_1.User.findOne({
+            where: { uuid: userUuid }
+        });
+        if (!theUser) {
+            return { errors: [{ field: "error", message: "User not found" }] };
+        }
+        console.log(`Let's remove ${theUser.uuid} from ${theClass.uuid}.`);
+        console.log(`${theClass.participants}`);
+        if (theClass.participants.filter(item => item.uuid === theUser.uuid).length === 0) {
+            return { errors: [{ field: "error", message: "User is not in the class!" }] };
+        }
+        theClass.participants = theClass.participants.filter(item => item.uuid !== theUser.uuid);
+        theClass = await theClass.save();
+        return { calendarClass: theClass };
+    }
 };
 __decorate([
     (0, type_graphql_1.Query)(() => [CalendarClass_1.CalendarClass]),
@@ -110,6 +158,7 @@ __decorate([
 ], CalendarClassResolver.prototype, "calendarClass", null);
 __decorate([
     (0, type_graphql_1.Mutation)(() => CalendarClassResponse),
+    (0, type_graphql_1.UseMiddleware)(isAuth_1.isAuth),
     __param(0, (0, type_graphql_1.Arg)('instructor', () => String)),
     __param(1, (0, type_graphql_1.Arg)('templateId', () => String)),
     __param(2, (0, type_graphql_1.Arg)('maxParticipants', () => type_graphql_1.Int)),
@@ -124,11 +173,29 @@ __decorate([
 ], CalendarClassResolver.prototype, "createCalendarClass", null);
 __decorate([
     (0, type_graphql_1.Mutation)(() => Boolean),
+    (0, type_graphql_1.UseMiddleware)(isAuth_1.isAuth),
     __param(0, (0, type_graphql_1.Arg)('uuid', () => String)),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", Promise)
 ], CalendarClassResolver.prototype, "deleteCalendarClass", null);
+__decorate([
+    (0, type_graphql_1.Mutation)(() => CalendarClassResponse),
+    (0, type_graphql_1.UseMiddleware)(isAuth_1.isAuth),
+    __param(0, (0, type_graphql_1.Arg)('classUuid', () => String)),
+    __param(1, (0, type_graphql_1.Ctx)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", Promise)
+], CalendarClassResolver.prototype, "addToClass", null);
+__decorate([
+    (0, type_graphql_1.Mutation)(() => CalendarClassResponse),
+    __param(0, (0, type_graphql_1.Arg)('userUuid', () => String)),
+    __param(1, (0, type_graphql_1.Arg)('classUuid', () => String)),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String]),
+    __metadata("design:returntype", Promise)
+], CalendarClassResolver.prototype, "removeFromClass", null);
 CalendarClassResolver = __decorate([
     (0, type_graphql_1.Resolver)()
 ], CalendarClassResolver);

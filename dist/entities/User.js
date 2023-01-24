@@ -14,6 +14,10 @@ const CustomBaseEntity_1 = require("./CustomBaseEntity");
 const type_graphql_1 = require("type-graphql");
 const typeorm_1 = require("typeorm");
 const CalendarClass_1 = require("./CalendarClass");
+const Post_1 = require("./Post");
+const Title_1 = require("./Title");
+const Membership_1 = require("./Membership");
+const Fee_1 = require("./Fee");
 let User = class User extends CustomBaseEntity_1.CustomBaseEntity {
 };
 __decorate([
@@ -72,31 +76,47 @@ __decorate([
 ], User.prototype, "waivered", void 0);
 __decorate([
     (0, type_graphql_1.Field)(() => type_graphql_1.Int),
-    (0, typeorm_1.Column)({ default: 1 }),
+    (0, typeorm_1.Column)({ type: "int", default: 1 }),
     __metadata("design:type", Number)
 ], User.prototype, "privacyLevel", void 0);
 __decorate([
     (0, type_graphql_1.Field)(() => type_graphql_1.Int),
-    (0, typeorm_1.Column)({ default: 1 }),
+    (0, typeorm_1.Column)({ type: "int", default: 1 }),
     __metadata("design:type", Number)
 ], User.prototype, "accessLevel", void 0);
-__decorate([
-    (0, type_graphql_1.Field)(() => String, { nullable: true }),
-    (0, typeorm_1.Column)({ nullable: true }),
-    __metadata("design:type", String)
-], User.prototype, "title", void 0);
 __decorate([
     (0, type_graphql_1.Field)(() => String, { nullable: true }),
     (0, typeorm_1.Column)({ type: "text", nullable: true }),
     __metadata("design:type", String)
 ], User.prototype, "bio", void 0);
 __decorate([
+    (0, type_graphql_1.Field)(() => Title_1.Title, { nullable: true }),
+    (0, typeorm_1.ManyToOne)(() => Title_1.Title, (title) => title.users, { nullable: true }),
+    __metadata("design:type", Title_1.Title)
+], User.prototype, "title", void 0);
+__decorate([
+    (0, type_graphql_1.Field)(() => [Post_1.Post]),
+    (0, typeorm_1.OneToMany)(() => Post_1.Post, (post) => post.author),
+    __metadata("design:type", Array)
+], User.prototype, "posts", void 0);
+__decorate([
+    (0, type_graphql_1.Field)(() => [CalendarClass_1.CalendarClass]),
     (0, typeorm_1.OneToMany)(() => CalendarClass_1.CalendarClass, (calendarClass) => calendarClass.instructor),
     __metadata("design:type", Array)
 ], User.prototype, "taughtClasses", void 0);
 __decorate([
+    (0, type_graphql_1.Field)(() => [Fee_1.Fee]),
+    (0, typeorm_1.OneToMany)(() => Fee_1.Fee, (fee) => fee.user),
+    __metadata("design:type", Array)
+], User.prototype, "fees", void 0);
+__decorate([
+    (0, type_graphql_1.Field)(() => [Membership_1.Membership]),
+    (0, typeorm_1.OneToMany)(() => Membership_1.Membership, (membership) => membership.user),
+    __metadata("design:type", Array)
+], User.prototype, "memberships", void 0);
+__decorate([
     (0, type_graphql_1.Field)(() => CalendarClass_1.CalendarClass),
-    (0, typeorm_1.ManyToOne)(() => CalendarClass_1.CalendarClass, (calendarClass) => calendarClass.participants, { onDelete: 'CASCADE' }),
+    (0, typeorm_1.ManyToOne)(() => CalendarClass_1.CalendarClass, (calendarClass) => calendarClass.participants),
     __metadata("design:type", CalendarClass_1.CalendarClass)
 ], User.prototype, "attendedClasses", void 0);
 User = __decorate([

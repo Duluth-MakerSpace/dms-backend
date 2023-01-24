@@ -16,6 +16,7 @@ exports.EventTemplateResolver = void 0;
 const type_graphql_1 = require("type-graphql");
 const types_1 = require("../types");
 const EventTemplate_1 = require("../entities/EventTemplate");
+const isAuth_1 = require("../middleware/isAuth");
 let EventTemplateResponse = class EventTemplateResponse {
 };
 __decorate([
@@ -90,6 +91,7 @@ __decorate([
 ], EventTemplateResolver.prototype, "eventTemplate", null);
 __decorate([
     (0, type_graphql_1.Mutation)(() => EventTemplateResponse),
+    (0, type_graphql_1.UseMiddleware)(isAuth_1.isAuth),
     __param(0, (0, type_graphql_1.Arg)('title', () => String)),
     __param(1, (0, type_graphql_1.Arg)('description', () => String, { nullable: true })),
     __param(2, (0, type_graphql_1.Arg)('image', () => String, { nullable: true })),
@@ -99,6 +101,7 @@ __decorate([
 ], EventTemplateResolver.prototype, "createEventTemplate", null);
 __decorate([
     (0, type_graphql_1.Mutation)(() => EventTemplate_1.EventTemplate, { nullable: true }),
+    (0, type_graphql_1.UseMiddleware)(isAuth_1.isAuth),
     __param(0, (0, type_graphql_1.Arg)('uuid', () => type_graphql_1.Int)),
     __param(1, (0, type_graphql_1.Arg)('title', () => String)),
     __param(2, (0, type_graphql_1.Arg)('description', () => String, { nullable: true })),
@@ -109,6 +112,7 @@ __decorate([
 ], EventTemplateResolver.prototype, "updateEventTemplate", null);
 __decorate([
     (0, type_graphql_1.Mutation)(() => Boolean),
+    (0, type_graphql_1.UseMiddleware)(isAuth_1.isAuth),
     __param(0, (0, type_graphql_1.Arg)('uuid', () => String)),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),

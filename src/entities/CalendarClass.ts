@@ -27,10 +27,6 @@ export class CalendarClass extends CustomBaseEntity {
     @Column({ type: "date", array: true })
     dates!: Date[];
 
-    @Field(() => String)
-    @Column({ type: "date" })
-    lastDate!: Date;
-
     @Field(() => Int)
     @Column({ type: "int" })
     duration!: number;
@@ -40,7 +36,7 @@ export class CalendarClass extends CustomBaseEntity {
     note?: string;
 
     @Field(() => Certification, { nullable: true })
-    @ManyToOne(() => Certification, (category) => category.classes, { nullable: true, onDelete: 'CASCADE' })
+    @ManyToOne(() => Certification, (category) => category.classes, { nullable: true })
     grantsCert?: Certification | null;
 
     @Field(() => ClassTemplate)
@@ -54,5 +50,24 @@ export class CalendarClass extends CustomBaseEntity {
     @Field(() => [User])
     @OneToMany(() => User, (user) => user.attendedClasses)
     participants!: User[];
+
+    @Field(() => String)
+    firstDate(): Date {
+        return new Date(Math.min(...this.dates.map(m => m.getTime())));
+    }
+
+    @Field(() => String)
+    lastDate(): Date {
+        return new Date(Math.max(...this.dates.map(m => m.getTime())));
+    }
+
+    @Field(() => String, { nullable: true })
+    nextDate(): Date | null {
+        const dates = this.dates.filter(m => m.getTime() >= Date.now())
+        if (dates.length) {
+            return new Date(Math.min(...dates.map(m => m.getTime())));
+        }
+        return null;
+    }
 
 }
