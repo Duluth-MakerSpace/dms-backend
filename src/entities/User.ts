@@ -4,6 +4,10 @@ import { CustomBaseEntity } from "./CustomBaseEntity";
 import { Field, Int, ObjectType } from "type-graphql";
 import { Column, Entity, ManyToOne, OneToMany, PrimaryGeneratedColumn } from "typeorm";
 import { CalendarClass } from "./CalendarClass";
+import { Post } from "./Post";
+import { Title } from "./Title";
+import { Membership } from "./Membership";
+import { Fee } from "./Fee";
 
 @ObjectType()
 @Entity()
@@ -52,26 +56,39 @@ export class User extends CustomBaseEntity {
     waivered?: boolean;
 
     @Field(() => Int)
-    @Column({ default: 1 })
-    privacyLevel?: number;
+    @Column({ type: "int", default: 1 })
+    privacyLevel!: number;
 
     @Field(() => Int)
-    @Column({ default: 1 })
-    accessLevel?: number;
-
-    @Field(() => String, { nullable: true })
-    @Column({ nullable: true })
-    title?: string;
+    @Column({ type: "int", default: 1 })
+    accessLevel!: number;
 
     @Field(() => String, { nullable: true })
     @Column({ type: "text", nullable: true })
     bio?: string;
 
+    @Field(() => Title, { nullable: true })
+    @ManyToOne(() => Title, (title) => title.users, { nullable: true })
+    title?: Title;
+
+    @Field(() => [Post])
+    @OneToMany(() => Post, (post) => post.author)
+    posts!: Post[];
+
+    @Field(() => [CalendarClass])
     @OneToMany(() => CalendarClass, (calendarClass) => calendarClass.instructor)
     taughtClasses!: CalendarClass[];
 
+    @Field(() => [Fee])
+    @OneToMany(() => Fee, (fee) => fee.user)
+    fees!: Fee[];
+
+    @Field(() => [Membership])
+    @OneToMany(() => Membership, (membership) => membership.user)
+    memberships!: Membership[];
+
     @Field(() => CalendarClass)
-    @ManyToOne(() => CalendarClass, (calendarClass) => calendarClass.participants, { onDelete: 'CASCADE' })
+    @ManyToOne(() => CalendarClass, (calendarClass) => calendarClass.participants)
     attendedClasses!: CalendarClass;
 
 }

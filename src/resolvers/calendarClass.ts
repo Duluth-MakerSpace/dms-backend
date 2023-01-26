@@ -1,9 +1,10 @@
-import { Arg, Field, Float, Int, Mutation, ObjectType, Query, Resolver } from "type-graphql";
-import { FieldError } from "../types";
+import { Arg, Ctx, Field, Float, Int, Mutation, ObjectType, Query, Resolver, UseMiddleware } from "type-graphql";
+import { FieldError, MyContext } from "../types";
 import { CalendarClass } from "../entities/CalendarClass";
 import { User } from "../entities/User";
 import { ClassTemplate } from "../entities/ClassTemplate";
 import { AppDataSource } from "../data-source";
+import { isAuth } from "../middleware/isAuth";
 
 @ObjectType()
 class CalendarClassResponse {
@@ -20,8 +21,6 @@ export class CalendarClassResolver {
     @Query(() => [CalendarClass])
     async calendarClasses(
     ): Promise<CalendarClass[]> {
-        // return await CalendarClass.find();
-
         const ccr = AppDataSource.getRepository(CalendarClass);
         const results = await ccr.find({ relations: ['instructor', 'classTemplate', 'participants'] })
         return results
@@ -38,6 +37,7 @@ export class CalendarClassResolver {
     }
 
     @Mutation(() => CalendarClassResponse)
+    @UseMiddleware(isAuth)
     async createCalendarClass(
         @Arg('instructor', () => String) instructorUuid: string,
         @Arg('templateId', () => String) templateId: string,
@@ -57,20 +57,16 @@ export class CalendarClassResolver {
         const template = await ClassTemplate.findOne({ where: { uuid: templateId } });
         if (!template) {
             return { errors: [{ field: "templateId", message: "Class template not found" }] }
-        }
-        if (maxParticipants < 0 || maxParticipants > 100) {
+        } else if (maxParticipants < 0 || maxParticipants > 100) {
             return { errors: [{ field: "maxParticipants", message: "Invalid number of max participants" }] }
-        }
-        if (cost < 0 || cost > 1000) {
+        } else if (cost < 0 || cost > 1000) {
             return { errors: [{ field: "cost", message: "Invalid cost" }] }
-        }
-        if (memberCost < 0 || memberCost > 1000) {
+        } if (memberCost < 0 || memberCost > 1000) {
             return { errors: [{ field: "memberCost", message: "Invalid member cost" }] }
-        }
-        // TODO: if dates is empty!
-        if (duration < 0 || duration > 60 * 24) {
+        } else if (duration < 0 || duration > 60 * 24) {
             return { errors: [{ field: "duration", message: "Invalid duration" }] }
         }
+        // TODO: if dates is empty!
         // TODO: CERT
 
         // Attempt to create event.
@@ -113,6 +109,7 @@ export class CalendarClassResolver {
 
 
     @Mutation(() => Boolean)
+    @UseMiddleware(isAuth)
     async deleteCalendarClass(
         @Arg('uuid', () => String) uuid: string,
     ): Promise<Boolean> {
@@ -123,5 +120,78 @@ export class CalendarClassResolver {
         }
         return true;
     }
+
+
+
+    @Mutation(() => CalendarClassResponse)
+    @UseMiddleware(isAuth)
+    async addToClass(
+        @Arg('classUuid', () => String) classUuid: string,
+        @Ctx() { req }: MyContext
+    ): Promise<CalendarClassResponse> {
+        let theClass = await CalendarClass.findOne({
+            where: { uuid: classUuid },
+            relations: ['instructor', 'classTemplate', 'participants']
+        });
+
+        if (!theClass) {
+            return { errors: [{ field: "error", message: "Class not found" }] };
+        } else if (theClass.participants.length >= theClass.maxParticipants) {
+            return { errors: [{ field: "error", message: "Class is full" }] };
+        }
+
+        const theUser = await User.findOne({
+            where: { uuid: req.session.uuid }
+        });
+
+        if (!theUser) {
+            return { errors: [{ field: "error", message: "User not found" }] };
+        } else if (theClass.participants.filter(item => item.uuid === theUser.uuid).length !== 0) {
+            return { errors: [{ field: "error", message: "User is already in the class!" }] };
+        }
+
+        theClass.participants.push(theUser);
+
+        theClass = await theClass.save();
+        return { calendarClass: theClass };
+    }
+
+
+
+
+    @Mutation(() => CalendarClassResponse)
+    async removeFromClass(
+        @Arg('userUuid', () => String) userUuid: string,
+        @Arg('classUuid', () => String) classUuid: string,
+    ): Promise<CalendarClassResponse> {
+        // return await CalendarClass.find();
+        let theClass = await CalendarClass.findOne({
+            where: { uuid: classUuid },
+            relations: ['instructor', 'classTemplate', 'participants']
+        });
+
+        if (!theClass) {
+            return { errors: [{ field: "error", message: "Class not found" }] };
+        }
+
+        const theUser = await User.findOne({
+            where: { uuid: userUuid }
+        });
+
+        if (!theUser) {
+            return { errors: [{ field: "error", message: "User not found" }] };
+        }
+
+        console.log(`Let's remove ${theUser.uuid} from ${theClass.uuid}.`)
+        console.log(`${theClass.participants}`)
+        if (theClass.participants.filter(item => item.uuid === theUser.uuid).length === 0) {
+            return { errors: [{ field: "error", message: "User is not in the class!" }] };
+        }
+
+        theClass.participants = theClass.participants.filter(item => item.uuid !== theUser.uuid);
+        theClass = await theClass.save();
+        return { calendarClass: theClass };
+    }
+
 
 }

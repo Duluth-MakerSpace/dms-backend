@@ -19,6 +19,7 @@ const CalendarEvent_1 = require("../entities/CalendarEvent");
 const User_1 = require("../entities/User");
 const EventTemplate_1 = require("../entities/EventTemplate");
 const data_source_1 = require("../data-source");
+const isAuth_1 = require("../middleware/isAuth");
 let CalendarEventResponse = class CalendarEventResponse {
 };
 __decorate([
@@ -101,6 +102,7 @@ __decorate([
 ], CalendarEventResolver.prototype, "calendarEvent", null);
 __decorate([
     (0, type_graphql_1.Mutation)(() => CalendarEventResponse),
+    (0, type_graphql_1.UseMiddleware)(isAuth_1.isAuth),
     __param(0, (0, type_graphql_1.Arg)('instructor', () => String)),
     __param(1, (0, type_graphql_1.Arg)('templateId', () => String)),
     __param(2, (0, type_graphql_1.Arg)('cost', () => type_graphql_1.Float)),
@@ -114,6 +116,7 @@ __decorate([
 ], CalendarEventResolver.prototype, "createCalendarEvent", null);
 __decorate([
     (0, type_graphql_1.Mutation)(() => Boolean),
+    (0, type_graphql_1.UseMiddleware)(isAuth_1.isAuth),
     __param(0, (0, type_graphql_1.Arg)('uuid', () => String)),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),

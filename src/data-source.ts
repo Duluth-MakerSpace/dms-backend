@@ -4,7 +4,10 @@ import { CalendarEvent } from "./entities/CalendarEvent";
 import { Certification } from "./entities/Certification";
 import { ClassTemplate } from "./entities/ClassTemplate";
 import { EventTemplate } from "./entities/EventTemplate";
+import { Fee } from "./entities/Fee";
+import { Membership } from "./entities/Membership";
 import { Post } from "./entities/Post";
+import { Title } from "./entities/Title";
 import { User } from "./entities/User";
 
 export const AppDataSource = new DataSource({
@@ -13,11 +16,11 @@ export const AppDataSource = new DataSource({
     // port: 5432,
     username: 'postgres',
     password: 'postgres',
-    database: 'dmstest',
+    database: 'dmsdb',
     synchronize: true, // run migrations
     logging: true,
     cache: true,
-    entities: [User, Post, Certification, ClassTemplate, CalendarClass, EventTemplate, CalendarEvent],
+    entities: [User, Post, Certification, ClassTemplate, CalendarClass, EventTemplate, CalendarEvent, Title, Fee, Membership],
     subscribers: [],
     migrations: [],
 })

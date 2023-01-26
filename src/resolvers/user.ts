@@ -1,12 +1,14 @@
-import { User } from "../entities/User";
-import { Arg, Ctx, Field, Int, Mutation, ObjectType, Query, Resolver } from "type-graphql";
-import { MyContext, FieldError } from "../types";
-import argon2 from "argon2"
-import { COOKIE_NAME, FORGOT_PASS_PREFIX, FRONTEND_URL, RFID_PREFIX } from "../constants";
+import argon2 from "argon2";
+import { IsDate, IsInt, Max, Min } from "class-validator";
 import { nanoid } from "nanoid";
+import { Arg, Args, ArgsType, Ctx, Field, FieldResolver, Int, Mutation, ObjectType, Query, Resolver, Root, UseMiddleware } from "type-graphql";
+import { ILike, LessThan } from "typeorm";
+import { COOKIE_NAME, FORGOT_PASS_PREFIX, FRONTEND_URL, RFID_PREFIX } from "../constants";
+import { User } from "../entities/User";
+import { isAuth } from "../middleware/isAuth";
+import { FieldError, MyContext } from "../types";
 import { sendEmail } from "../utils/sendEmail";
 import { getPasswordErrors, getRegisterErrors } from "../utils/validateForms";
-import { ILike } from "typeorm";
 
 @ObjectType()
 class UserResponse {
@@ -18,8 +20,33 @@ class UserResponse {
 }
 
 
-@Resolver()
+
+@ArgsType()
+class GetUsersArgs {
+    @Field(() => Int)
+    @IsInt()
+    @Min(0)
+    @Max(100)
+    limit = 5
+
+    @Field(() => Date, { nullable: true })
+    @IsDate()
+    cursor?: Date
+}
+
+
+
+@Resolver(User)
 export class UserResolver {
+    @FieldResolver(() => String)
+    email(@Root() user: User, @Ctx() { req }: MyContext) {
+        if (req.session.uuid === user.uuid || req.session.accessLevel >= 3) {
+            return user.email;
+        }
+        return "";
+    }
+
+
     @Query(() => User, { nullable: true })
     me(
         @Ctx() { req }: MyContext
@@ -28,7 +55,10 @@ export class UserResolver {
             return null
         }
 
-        return User.findOne({ where: { uuid: req.session.uuid } });
+        return User.findOne({
+            where: { uuid: req.session.uuid },
+            relations: ['title']
+        });
     }
 
     @Mutation(() => Boolean)
@@ -84,13 +114,22 @@ export class UserResolver {
 
         // Login the user.
         req.session.uuid = user.uuid;
+        req.session.accessLevel = user.accessLevel;
+
         return { user }
     }
 
     @Query(() => [User])
-    users(
-    ): Promise<User[]> {
-        return User.find({ order: { id: "ASC" } });
+    users(@Args() { limit, cursor }: GetUsersArgs): Promise<User[]> {
+        const whereClause = {
+            ...(cursor && { createdAt: LessThan(cursor) })
+        }
+        return User.find({
+            where: whereClause,
+            relations: ['posts', 'title'],
+            take: limit,
+            order: { id: "ASC" }
+        });
     }
 
     @Query(() => [User])
@@ -101,6 +140,7 @@ export class UserResolver {
             where: [
                 { name: ILike(`%${search}%`) },
             ],
+            take: 10,
             cache: 30000
         });
     }
@@ -109,7 +149,10 @@ export class UserResolver {
     user(
         @Arg('uuid', () => String) uuid: string,
     ): Promise<User | null> {
-        return User.findOne({ where: { uuid: uuid } });
+        return User.findOne({
+            where: { uuid: uuid },
+            relations: ['posts', 'title']
+        });
     }
 
     @Mutation(() => UserResponse)
@@ -149,6 +192,8 @@ export class UserResolver {
             }).save()
             // Log in the user.
             req.session.uuid = user.uuid;
+            req.session.accessLevel = user.accessLevel;
+
         } catch (err: any) {
             if (err && err.code === "23505") {
                 return { errors: [{ field: "email", message: "Email/name already exists" }] }
@@ -168,11 +213,9 @@ export class UserResolver {
         @Ctx() { req }: MyContext
     ): Promise<UserResponse> {
         email = email.toLowerCase();
-        console.log('HaaaI!')
         const user = await User.findOne(
             { where: { email: email } }
         );
-        console.log('bbbb!')
 
         if (!user) {
             return {
@@ -180,18 +223,16 @@ export class UserResolver {
             }
         }
 
-        console.log('ccc!')
         const valid = await argon2.verify(user.password, password);
-        console.log('ddd!')
         if (!valid) {
             return {
                 errors: [{ field: 'password', message: 'Incorrect password' }]
             }
         }
 
-        console.log('HI!')
         // Log in.
         req.session.uuid = user.uuid;
+        req.session.accessLevel = user.accessLevel;
 
         return { user };
     }
@@ -220,9 +261,15 @@ export class UserResolver {
         @Arg('durationSeconds', () => Int, { defaultValue: 30 }) durationSeconds: number,
         @Ctx() { redisClient }: MyContext
     ): Promise<Boolean> {
+
+        const user = await User.findOne({ where: { rfid: rfid } });
+        if (!user) {
+            return false;
+        }
+
         await redisClient.set(
             RFID_PREFIX + rfid,
-            rfid,
+            user.uuid,
             "EX",
             durationSeconds
         );
@@ -232,11 +279,15 @@ export class UserResolver {
 
     @Mutation(() => Boolean)
     async rfidLogout(
-        @Arg('rfid') rfid: string,
+        @Arg('uuid') uuid: string,
         @Ctx() { redisClient }: MyContext
     ): Promise<Boolean> {
 
-        await redisClient.del(RFID_PREFIX + rfid);
+        const user = await User.findOne({ where: { uuid: uuid } });
+        if (!user) {
+            return false;
+        }
+        await redisClient.del(RFID_PREFIX + user.rfid);
 
         return true;
     }
@@ -258,22 +309,24 @@ export class UserResolver {
 
 
     @Mutation(() => User, { nullable: true })
+    @UseMiddleware(isAuth)
     async updateUser(
         @Arg('uuid', () => Int) uuid: string,
-        @Arg('title', () => String) title: string,
+        @Arg('bio', () => String) bio: string,
     ): Promise<User | null> {
         const user = await User.findOne({ where: { uuid: uuid } });
         if (!user) {
             return null;
         }
-        if (typeof title !== 'undefined') {
-            await User.update({ uuid }, { title })
+        if (typeof bio !== 'undefined') {
+            await User.update({ uuid }, { bio })
         }
         return user;
     }
 
 
     @Mutation(() => Boolean)
+    @UseMiddleware(isAuth)
     async deleteUser(
         @Arg('uuid', () => String) uuid: string,
     ): Promise<Boolean> {

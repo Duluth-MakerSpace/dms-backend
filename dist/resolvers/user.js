@@ -16,15 +16,17 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.UserResolver = void 0;
-const User_1 = require("../entities/User");
-const type_graphql_1 = require("type-graphql");
-const types_1 = require("../types");
 const argon2_1 = __importDefault(require("argon2"));
-const constants_1 = require("../constants");
+const class_validator_1 = require("class-validator");
 const nanoid_1 = require("nanoid");
+const type_graphql_1 = require("type-graphql");
+const typeorm_1 = require("typeorm");
+const constants_1 = require("../constants");
+const User_1 = require("../entities/User");
+const isAuth_1 = require("../middleware/isAuth");
+const types_1 = require("../types");
 const sendEmail_1 = require("../utils/sendEmail");
 const validateForms_1 = require("../utils/validateForms");
-const typeorm_1 = require("typeorm");
 let UserResponse = class UserResponse {
 };
 __decorate([
@@ -38,12 +40,41 @@ __decorate([
 UserResponse = __decorate([
     (0, type_graphql_1.ObjectType)()
 ], UserResponse);
+let GetUsersArgs = class GetUsersArgs {
+    constructor() {
+        this.limit = 5;
+    }
+};
+__decorate([
+    (0, type_graphql_1.Field)(() => type_graphql_1.Int),
+    (0, class_validator_1.IsInt)(),
+    (0, class_validator_1.Min)(0),
+    (0, class_validator_1.Max)(100),
+    __metadata("design:type", Object)
+], GetUsersArgs.prototype, "limit", void 0);
+__decorate([
+    (0, type_graphql_1.Field)(() => Date, { nullable: true }),
+    (0, class_validator_1.IsDate)(),
+    __metadata("design:type", Date)
+], GetUsersArgs.prototype, "cursor", void 0);
+GetUsersArgs = __decorate([
+    (0, type_graphql_1.ArgsType)()
+], GetUsersArgs);
 let UserResolver = class UserResolver {
+    email(user, { req }) {
+        if (req.session.uuid === user.uuid || req.session.accessLevel >= 3) {
+            return user.email;
+        }
+        return "";
+    }
     me({ req }) {
         if (!req.session.uuid) {
             return null;
         }
-        return User_1.User.findOne({ where: { uuid: req.session.uuid } });
+        return User_1.User.findOne({
+            where: { uuid: req.session.uuid },
+            relations: ['title']
+        });
     }
     async forgotPassword(email, { redisClient }) {
         const user = await User_1.User.findOne({ where: { email: email } });
@@ -72,21 +103,32 @@ let UserResolver = class UserResolver {
         await User_1.User.update({ uuid: uuid }, { password: await argon2_1.default.hash(password) });
         await redisClient.del(key);
         req.session.uuid = user.uuid;
+        req.session.accessLevel = user.accessLevel;
         return { user };
     }
-    users() {
-        return User_1.User.find({ order: { id: "ASC" } });
+    users({ limit, cursor }) {
+        const whereClause = Object.assign({}, (cursor && { createdAt: (0, typeorm_1.LessThan)(cursor) }));
+        return User_1.User.find({
+            where: whereClause,
+            relations: ['posts', 'title'],
+            take: limit,
+            order: { id: "ASC" }
+        });
     }
     usersSearch(search) {
         return User_1.User.find({
             where: [
                 { name: (0, typeorm_1.ILike)(`%${search}%`) },
             ],
+            take: 10,
             cache: 30000
         });
     }
     user(uuid) {
-        return User_1.User.findOne({ where: { uuid: uuid } });
+        return User_1.User.findOne({
+            where: { uuid: uuid },
+            relations: ['posts', 'title']
+        });
     }
     async createUser(email, name, password, phone, emergPhone, emergContact, waivered, newsletter, privacyLevel, { req }) {
         const errors = (0, validateForms_1.getRegisterErrors)(email, password, name);
@@ -108,6 +150,7 @@ let UserResolver = class UserResolver {
                 privacyLevel: privacyLevel
             }).save();
             req.session.uuid = user.uuid;
+            req.session.accessLevel = user.accessLevel;
         }
         catch (err) {
             if (err && err.code === "23505") {
@@ -119,24 +162,20 @@ let UserResolver = class UserResolver {
     }
     async login(email, password, { req }) {
         email = email.toLowerCase();
-        console.log('HaaaI!');
         const user = await User_1.User.findOne({ where: { email: email } });
-        console.log('bbbb!');
         if (!user) {
             return {
                 errors: [{ field: 'email', message: 'User not found' }]
             };
         }
-        console.log('ccc!');
         const valid = await argon2_1.default.verify(user.password, password);
-        console.log('ddd!');
         if (!valid) {
             return {
                 errors: [{ field: 'password', message: 'Incorrect password' }]
             };
         }
-        console.log('HI!');
         req.session.uuid = user.uuid;
+        req.session.accessLevel = user.accessLevel;
         return { user };
     }
     logout({ req, res }) {
@@ -151,11 +190,19 @@ let UserResolver = class UserResolver {
         }));
     }
     async rfidLogin(rfid, durationSeconds, { redisClient }) {
-        await redisClient.set(constants_1.RFID_PREFIX + rfid, rfid, "EX", durationSeconds);
+        const user = await User_1.User.findOne({ where: { rfid: rfid } });
+        if (!user) {
+            return false;
+        }
+        await redisClient.set(constants_1.RFID_PREFIX + rfid, user.uuid, "EX", durationSeconds);
         return true;
     }
-    async rfidLogout(rfid, { redisClient }) {
-        await redisClient.del(constants_1.RFID_PREFIX + rfid);
+    async rfidLogout(uuid, { redisClient }) {
+        const user = await User_1.User.findOne({ where: { uuid: uuid } });
+        if (!user) {
+            return false;
+        }
+        await redisClient.del(constants_1.RFID_PREFIX + user.rfid);
         return true;
     }
     async rfids({ redisClient }) {
@@ -166,13 +213,13 @@ let UserResolver = class UserResolver {
         const values = await redisClient.mget(keys);
         return values;
     }
-    async updateUser(uuid, title) {
+    async updateUser(uuid, bio) {
         const user = await User_1.User.findOne({ where: { uuid: uuid } });
         if (!user) {
             return null;
         }
-        if (typeof title !== 'undefined') {
-            await User_1.User.update({ uuid }, { title });
+        if (typeof bio !== 'undefined') {
+            await User_1.User.update({ uuid }, { bio });
         }
         return user;
     }
@@ -186,6 +233,14 @@ let UserResolver = class UserResolver {
         return true;
     }
 };
+__decorate([
+    (0, type_graphql_1.FieldResolver)(() => String),
+    __param(0, (0, type_graphql_1.Root)()),
+    __param(1, (0, type_graphql_1.Ctx)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [User_1.User, Object]),
+    __metadata("design:returntype", void 0)
+], UserResolver.prototype, "email", null);
 __decorate([
     (0, type_graphql_1.Query)(() => User_1.User, { nullable: true }),
     __param(0, (0, type_graphql_1.Ctx)()),
@@ -212,8 +267,9 @@ __decorate([
 ], UserResolver.prototype, "changePassword", null);
 __decorate([
     (0, type_graphql_1.Query)(() => [User_1.User]),
+    __param(0, (0, type_graphql_1.Args)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", []),
+    __metadata("design:paramtypes", [GetUsersArgs]),
     __metadata("design:returntype", Promise)
 ], UserResolver.prototype, "users", null);
 __decorate([
@@ -273,7 +329,7 @@ __decorate([
 ], UserResolver.prototype, "rfidLogin", null);
 __decorate([
     (0, type_graphql_1.Mutation)(() => Boolean),
-    __param(0, (0, type_graphql_1.Arg)('rfid')),
+    __param(0, (0, type_graphql_1.Arg)('uuid')),
     __param(1, (0, type_graphql_1.Ctx)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String, Object]),
@@ -288,20 +344,22 @@ __decorate([
 ], UserResolver.prototype, "rfids", null);
 __decorate([
     (0, type_graphql_1.Mutation)(() => User_1.User, { nullable: true }),
+    (0, type_graphql_1.UseMiddleware)(isAuth_1.isAuth),
     __param(0, (0, type_graphql_1.Arg)('uuid', () => type_graphql_1.Int)),
-    __param(1, (0, type_graphql_1.Arg)('title', () => String)),
+    __param(1, (0, type_graphql_1.Arg)('bio', () => String)),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String, String]),
     __metadata("design:returntype", Promise)
 ], UserResolver.prototype, "updateUser", null);
 __decorate([
     (0, type_graphql_1.Mutation)(() => Boolean),
+    (0, type_graphql_1.UseMiddleware)(isAuth_1.isAuth),
     __param(0, (0, type_graphql_1.Arg)('uuid', () => String)),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", Promise)
 ], UserResolver.prototype, "deleteUser", null);
 UserResolver = __decorate([
-    (0, type_graphql_1.Resolver)()
+    (0, type_graphql_1.Resolver)(User_1.User)
 ], UserResolver);
 exports.UserResolver = UserResolver;

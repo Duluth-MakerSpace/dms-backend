@@ -6,7 +6,7 @@ import { Redis } from "ioredis";
 
 export type MyContext = {
     req: Request & {
-        session: Session & Partial<SessionData> & { uuid: string };
+        session: Session & Partial<SessionData> & { uuid: string, accessLevel: number };
     };
     res: Response;
     redisClient: Redis;

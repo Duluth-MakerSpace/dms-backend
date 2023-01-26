@@ -1,9 +1,10 @@
-import { Arg, Field, Float, Int, Mutation, ObjectType, Query, Resolver } from "type-graphql";
+import { Arg, Field, Float, Int, Mutation, ObjectType, Query, Resolver, UseMiddleware } from "type-graphql";
 import { FieldError } from "../types";
 import { CalendarEvent } from "../entities/CalendarEvent";
 import { User } from "../entities/User";
 import { EventTemplate } from "../entities/EventTemplate";
 import { AppDataSource } from "../data-source";
+import { isAuth } from "../middleware/isAuth";
 
 @ObjectType()
 class CalendarEventResponse {
@@ -35,6 +36,7 @@ export class CalendarEventResolver {
     }
 
     @Mutation(() => CalendarEventResponse)
+    @UseMiddleware(isAuth)
     async createCalendarEvent(
         @Arg('instructor', () => String) instructorUuid: string,
         @Arg('templateId', () => String) templateId: string,
@@ -101,6 +103,7 @@ export class CalendarEventResolver {
 
 
     @Mutation(() => Boolean)
+    @UseMiddleware(isAuth)
     async deleteCalendarEvent(
         @Arg('uuid', () => String) uuid: string,
     ): Promise<Boolean> {
